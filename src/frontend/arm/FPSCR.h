@@ -84,7 +84,7 @@ public:
 
     /// Indicates the stride of a vector.
     u32 Stride() const {
-        return Common::Bits<20, 21>(value) + 1;
+        return Common::Bits<20, 21>(value);
     }
 
     /// Indicates the length of a vector.
