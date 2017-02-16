@@ -15,11 +15,10 @@ bool ArmTranslatorVisitor::arm_SSAT(Cond cond, Imm5 sat_imm, Reg d, Imm5 imm5, b
     if (d == Reg::PC || n == Reg::PC)
         return UnpredictableInstruction();
 
-    size_t saturate_to = static_cast<size_t>(sat_imm) + 1;
-    ShiftType shift = !sh ? ShiftType::LSL : ShiftType::ASR;
-
     // SSAT <Rd>, #<saturate_to>, <Rn>
     if (ConditionPassed(cond)) {
+        size_t saturate_to = static_cast<size_t>(sat_imm) + 1;
+        ShiftType shift = !sh ? ShiftType::LSL : ShiftType::ASR;
         auto operand = EmitImmShift(ir.GetRegister(n), shift, imm5, ir.GetCFlag());
         auto result = ir.SignedSaturation(operand.result, saturate_to);
         ir.SetRegister(d, result.result);
@@ -37,11 +36,10 @@ bool ArmTranslatorVisitor::arm_USAT(Cond cond, Imm5 sat_imm, Reg d, Imm5 imm5, b
     if (d == Reg::PC || n == Reg::PC)
         return UnpredictableInstruction();
 
-    size_t saturate_to = static_cast<size_t>(sat_imm);
-    ShiftType shift = !sh ? ShiftType::LSL : ShiftType::ASR;
-
     // USAT <Rd>, #<saturate_to>, <Rn>
     if (ConditionPassed(cond)) {
+        size_t saturate_to = static_cast<size_t>(sat_imm);
+        ShiftType shift = !sh ? ShiftType::LSL : ShiftType::ASR;
         auto operand = EmitImmShift(ir.GetRegister(n), shift, imm5, ir.GetCFlag());
         auto result = ir.UnsignedSaturation(operand.result, saturate_to);
         ir.SetRegister(d, result.result);
