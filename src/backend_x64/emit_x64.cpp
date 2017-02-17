@@ -1811,7 +1811,8 @@ void EmitX64::EmitPackedHalvingAddU16(RegAlloc& reg_alloc, IR::Block&, IR::Inst*
     code->add(result, xor_a_b);
 }
 
-void EmitX64::EmitPackedHalvingAddS8(RegAlloc& reg_alloc, IR::Block&, IR::Inst* inst) {
+static void EmitPackedHalvingAddSHelper(RegAlloc& reg_alloc, IR::Inst* inst,
+                                        BlockOfCode* code, u32 mask) {
     IR::Value a = inst->GetArg(0);
     IR::Value b = inst->GetArg(1);
 
@@ -1825,7 +1826,7 @@ void EmitX64::EmitPackedHalvingAddS8(RegAlloc& reg_alloc, IR::Block&, IR::Inst* 
     // This relies on the equality x+y == ((x&y) << 1) + (x^y).
     // Note that x^y always contains the LSB of the result.
     // Since we want to calculate (x+y)/2, we can instead calculate (x&y) + ((x^y)>>1).
-    // We mask by 0x7F to remove the LSB so that it doesn't leak into the field below.
+    // We mask to remove the LSB so that it doesn't leak into the field below.
     // carry propagates the sign bit from (x^y)>>1 upwards by one.
 
     code->mov(xor_a_b, reg_a);
@@ -1834,37 +1835,17 @@ void EmitX64::EmitPackedHalvingAddS8(RegAlloc& reg_alloc, IR::Block&, IR::Inst* 
     code->mov(carry, xor_a_b);
     code->and(carry, 0x80808080);
     code->shr(xor_a_b, 1);
-    code->and(xor_a_b, 0x7F7F7F7F);
+    code->and(xor_a_b, mask);
     code->add(result, xor_a_b);
     code->xor(result, carry);
 }
 
+void EmitX64::EmitPackedHalvingAddS8(RegAlloc& reg_alloc, IR::Block&, IR::Inst* inst) {
+    return EmitPackedHalvingAddSHelper(reg_alloc, inst, code, 0x7F7F7F7F);
+}
+
 void EmitX64::EmitPackedHalvingAddS16(RegAlloc& reg_alloc, IR::Block&, IR::Inst* inst) {
-    IR::Value a = inst->GetArg(0);
-    IR::Value b = inst->GetArg(1);
-
-    Xbyak::Reg32 reg_a = reg_alloc.UseDefGpr(a, inst).cvt32();
-    Xbyak::Reg32 reg_b = reg_alloc.UseGpr(b).cvt32();
-    Xbyak::Reg32 xor_a_b = reg_alloc.ScratchGpr().cvt32();
-    Xbyak::Reg32 and_a_b = reg_a;
-    Xbyak::Reg32 result = reg_a;
-    Xbyak::Reg32 carry = reg_alloc.ScratchGpr().cvt32();
-
-    // This relies on the equality x+y == ((x&y) << 1) + (x^y).
-    // Note that x^y always contains the LSB of the result.
-    // Since we want to calculate (x+y)/2, we can instead calculate (x&y) + ((x^y)>>1).
-    // We mask by 0x7FFF to remove the LSB so that it doesn't leak into the field below.
-    // carry propagates the sign bit from (x^y)>>1 upwards by one.
-
-    code->mov(xor_a_b, reg_a);
-    code->and(and_a_b, reg_b);
-    code->xor(xor_a_b, reg_b);
-    code->mov(carry, xor_a_b);
-    code->and(carry, 0x80008000);
-    code->shr(xor_a_b, 1);
-    code->and(xor_a_b, 0x7FFF7FFF);
-    code->add(result, xor_a_b);
-    code->xor(result, carry);
+    return EmitPackedHalvingAddSHelper(reg_alloc, inst, code, 0x7FFF7FFF);
 }
 
 void EmitX64::EmitPackedHalvingSubU8(RegAlloc& reg_alloc, IR::Block&, IR::Inst* inst) {
